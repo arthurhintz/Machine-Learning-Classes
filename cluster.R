@@ -15,8 +15,10 @@ suppressMessages({
 
 library(recipes)
 library(parsnip)
-library(tidymodels)
+
 library(lubridate)
+
+
 tidymodels::tidymodels_prefer()
 
 theme_set(ggplot2::theme_grey(base_size = 13))
@@ -32,14 +34,6 @@ dados <- dados_ml %>%
   drop_na() |> 
   dplyr::mutate(across(where(is.numeric), as.numeric),
                 across(!where(is.numeric), as.factor))
-
-
-  
-
-# summary(dados$Produtividade)
-View(teste)
-
-skimr::skim(teste)
 
 
 # 2) Recipe: remover y, checar ZV e normalizar --------------------------------
@@ -288,7 +282,7 @@ ab <- aa %>%
   summarise(locais = paste(unique(`dados$Local`), collapse = ", ")) %>%
   arrange(cluster)
 
-
+View(ab)
 
 
 #==========/==========/==========/==========/==========/==========/==========/==========/
@@ -387,52 +381,172 @@ ab <- bb %>%
   summarise(producao = mean(.pred)) 
 
 
+
 #==========/==========/==========/==========/==========/==========/==========/==========/
 
 #==========/==========/==========/==========/==========/==========/==========/==========/
 # Mapa com os clusters
 
 library(geobr)
+library(sf)
 
 
-# 1. Carregar o mapa do RS (código do estado RS = 43)
 rs <- read_state(code_state = "RS", year = 2020)
 
-bd_sf <- cbind(dados2$)
+bd <- data.frame(
+  Latitude = dados$Latitude,
+  Longitude = dados$Longitude,
+  Cluster = clusters,
+  Prod = prod_c$.pred
+)
 
+bd_sf <- st_as_sf(bd, coords = c("Longitude", "Latitude"), crs = 4326)
 
-# 2. Transformar o seu dataframe em objeto espacial (sf)
-bd_sf <- bd_end %>%
-  mutate(
-    VL_LONGITUDE = as.numeric(VL_LONGITUDE),
-    VL_LATITUDE = as.numeric(VL_LATITUDE),
-    VL_ALTITUDE = as.numeric(VL_ALTITUDE),
-    V2 = as.factor(V2)
-  ) %>%
-  st_as_sf(coords = c("VL_LONGITUDE", "VL_LATITUDE"), crs = 4326)
 
 # 3. Plotar
 ggplot() +
   geom_sf(data = rs, fill = "gray95", color = "gray60") +
-  geom_sf(data = bd_sf, aes(color = V2, size = VL_ALTITUDE), alpha = 0.8) +
+  geom_sf(data = bd_sf, aes(color = Cluster, size = Prod), alpha = 0.8) +
   scale_size_continuous(range = c(2, 8)) +
   scale_color_brewer(palette = "Set1") +
   theme_minimal() +
   labs(
-    title = "Agrupamento das Estações Meteorológicas no RS",
+    title = "Agrupamento",
     color = "Grupo",
-    size = "Altitude (m)"
+    size = "Produtividade"
   )
 
 
 
 
+# opção 2
+
+
+# Transformar para projeção métrica (em metros)
+bd_proj <- st_transform(bd_sf, 31983)  # SIRGAS / RS
+
+# Criar buffer de 30 km (30000 metros)
+raio_km <- 100000
+buf <- st_buffer(bd_proj, dist = raio_km)
+
+# Dissolver buffers por cluster (cria áreas contínuas)
+regioes <- buf %>%
+  group_by(Cluster) %>%
+  summarise(geometry = st_union(geometry)) %>%
+  st_as_sf()
+
+# Voltar para WGS84 para plotar
+regioes <- st_transform(regioes, 4326)
+
+# Plot
+ggplot() +
+  geom_sf(data = rs, fill = "gray95", color = "gray70") +
+  geom_sf(data = regioes, aes(fill = Cluster), alpha = 0.45, color = NA) +
+  geom_sf(data = bd_sf, aes(color = Cluster, size = Prod), alpha = 0.9) +
+  scale_fill_brewer(palette = "Set1") +
+  scale_color_brewer(palette = "Set1") +
+  scale_size_continuous(range = c(2, 8)) +
+  theme_minimal() +
+  labs(
+    title = "Regiões por Cluster (buffer de 30 km)",
+    fill = "Cluster",
+    color = "Cluster",
+    size = "Produtividade"
+  )
+
+
+# opção 3
+
+# 3. Gerar Voronoi no bounding box do RS
+vor <- st_voronoi(st_union(bd_sf), envelope = st_geometry(rs))
+
+# 4. Converter para sf
+vor_sf <- st_collection_extract(vor)
+
+# 5. Atribuir cluster a cada polígono (por localização)
+vor_df <- st_sf(geometry = vor_sf) |>
+  st_join(bd_sf, join = st_contains)
+
+rs <- st_transform(rs, 4326)
+
+# 6. Recortar (clip) os polígonos pelo RS
+vor_clip <- st_intersection(vor_df, rs)
+
+# 7. Plotar
+ggplot() +
+  geom_sf(data = rs, fill = "gray95", color = "gray70") +
+  geom_sf(data = vor_clip, aes(fill = Cluster), alpha = 0.5, color = NA) +
+  geom_sf(data = bd_sf, aes(color = Cluster, size = Prod), alpha = 0.9) +
+  scale_fill_brewer(palette = "Set1") +
+  scale_color_brewer(palette = "Set1") +
+  theme_minimal() +
+  labs(
+    title = "Regiões por Cluster (Voronoi Recortado pelo RS)",
+    fill = "Cluster",
+    color = "Cluster",
+    size = "Prod"
+  )
 
 
 
 
+# opção 4
 
 
+# 1. Mapa RS
+rs <- read_state(code_state = "RS", year = 2020)
+rs <- st_transform(rs, 31983)  # projeta para metros
+
+# 2. Dados como sf
+bd_sf <- st_as_sf(
+  data.frame(
+    Latitude = dados$Latitude,
+    Longitude = dados$Longitude,
+    Cluster = clusters,
+    Prod = prod_c$.pred
+  ),
+  coords = c("Longitude", "Latitude"),
+  crs = 4326
+) |> st_transform(31983)
+
+
+# 3. Criar buffer de 50 km (50.000 metros)
+buffer_50km <- st_buffer(bd_sf, dist = 100000)
+
+# 4. Unir buffers
+area_valida <- st_union(buffer_50km)
+
+# 5. Criar Voronoi limitado pelo RS
+vor <- st_voronoi(st_union(bd_sf), envelope = st_geometry(rs))
+vor_sf <- st_collection_extract(vor) |> st_sf()
+
+# 6. Atribuir cluster aos polígonos
+vor_df <- st_join(vor_sf, bd_sf, join = st_nearest_feature)
+
+# 7. Recortar: Voronoi ∩ RS ∩ buffer
+vor_clip <- st_intersection(vor_df, rs) |> 
+  st_intersection(area_valida)
+
+# 8. Voltar o RS para WGS84 só para plot
+rs_plot <- st_transform(rs, 4326)
+bd_plot <- st_transform(bd_sf, 4326)
+vor_plot <- st_transform(vor_clip, 4326)
+
+
+# 9. Plot
+ggplot() +
+  geom_sf(data = rs_plot, fill = "gray95", color = "gray70") +
+  geom_sf(data = vor_plot, aes(fill = cluster), alpha = 0.6, color = NA) +
+  geom_sf(data = bd_plot, aes(color = cluster, size = Prod), alpha = 0.8) +
+  scale_fill_brewer(palette = "Set1") +
+  scale_color_brewer(palette = "Set1") +
+  theme_minimal() +
+  labs(
+    title = "Regiões de Cluster (apenas áreas até 50 km dos pontos)",
+    fill = "Cluster",
+    color = "Cluster",
+    size = "Prod"
+  )
 
 
 
