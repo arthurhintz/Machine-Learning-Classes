@@ -13,8 +13,9 @@ teste <- dados %>%
       TRUE      ~ "Altissima"
     )
   ) %>% 
-  select(-c(COD_PROD, Cod_Estacao_Met, Area_colhida, Epoca_de_semeadura, Cultivar)) %>%
-  drop_na()
+  select(-c(COD_PROD, Cod_Estacao_Met, Area_colhida, Epoca_de_semeadura, Cultivar, Produtividade)) %>%
+  drop_na() |>dplyr::mutate(across(where(is.numeric), as.numeric),
+                across(!where(is.numeric), as.factor))
 
 # summary(dados$Produtividade)
 View(teste)
