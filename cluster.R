@@ -294,7 +294,141 @@ ab <- aa %>%
 #==========/==========/==========/==========/==========/==========/==========/==========/
 
 
-dados2 <- rbind(clusters, dados_ml$Produtividade)
+dados2 <- dados_ml %>% 
+  select(-c(COD_PROD, Cod_Estacao_Met, Area_colhida, Epoca_de_semeadura, Cultivar)) %>%
+  drop_na() |> 
+  dplyr::mutate(across(where(is.numeric), as.numeric),
+                across(!where(is.numeric), as.factor))
+
+dados_f <- cbind(clusters, dados2$Produtividade)
+
+colnames(dados_f) <- c("cluster", "prod")
+
+
+# Treino/teste ####
+base_quebra <- rsample::initial_split(dados_f)
+treino <- rsample::training(base_quebra)
+teste  <- rsample::testing(base_quebra)
+
+# Especificação do modelo: Árvore de Regressão ####
+modelo <- parsnip::decision_tree(
+  cost_complexity = tune::tune(),
+  tree_depth      = tune::tune(),
+  min_n           = tune::tune()
+) |>
+  parsnip::set_engine("rpart") |>
+  parsnip::set_mode("regression")
+
+# Validação cruzada ####
+set.seed(123)
+bases_Cross <- rsample::vfold_cv(treino, v = 5)
+
+# Grade de hiperparâmetros ####
+grade <- dials::grid_latin_hypercube(
+  dials::cost_complexity(),
+  dials::tree_depth(),
+  dials::min_n(),
+  size = 100
+)
+
+# Tunagem ####
+tunagem <- tune::tune_grid(
+  object       = modelo,
+  preprocessor = prod ~ cluster,
+  resamples    = bases_Cross,
+  grid         = grade,
+  metrics      = yardstick::metric_set(
+    yardstick::rmse,
+    yardstick::rsq,
+    yardstick::mae,
+    yardstick::mape
+  ),
+  control      = tune::control_grid(
+    verbose   = TRUE,
+    allow_par = FALSE
+  )
+)
+
+# Resultados da tunagem ####
+autoplot(tunagem)
+
+tune::show_best(tunagem, metric = "rsq", n = 10)
+
+melhores <- tune::select_best(tunagem, metric = "rmse")
+melhores
+
+# Finalização e ajuste no treino ####
+modelo_final <- tune::finalize_model(modelo, melhores)
+
+ajuste_final <- parsnip::fit(
+  object  = modelo_final,
+  formula = prod ~ cluster,
+  data    = treino
+)
+
+# Predição no teste ####
+pred_teste <- stats::predict(ajuste_final, new_data = teste)
+
+# Métricas no teste ####
+yardstick::rmse(dplyr::tibble(truth = teste$prod, estimate = pred_teste$.pred), truth, estimate)
+yardstick::mae (dplyr::tibble(truth = teste$prod, estimate = pred_teste$.pred), truth, estimate)
+yardstick::rsq (dplyr::tibble(truth = teste$prod, estimate = pred_teste$.pred), truth, estimate)
+
+# Importância de variáveis ####
+vip::vip(ajuste_final)
+
+
+
+bb <- cbind(teste, pred_teste)
+
+
+ab <- bb %>%
+  group_by(cluster) %>%
+  summarise(producao = mean(.pred)) 
+
+
+#==========/==========/==========/==========/==========/==========/==========/==========/
+
+#==========/==========/==========/==========/==========/==========/==========/==========/
+# Mapa com os clusters
+
+library(geobr)
+
+
+# 1. Carregar o mapa do RS (código do estado RS = 43)
+rs <- read_state(code_state = "RS", year = 2020)
+
+bd_sf <- cbind(dados2$)
+
+
+# 2. Transformar o seu dataframe em objeto espacial (sf)
+bd_sf <- bd_end %>%
+  mutate(
+    VL_LONGITUDE = as.numeric(VL_LONGITUDE),
+    VL_LATITUDE = as.numeric(VL_LATITUDE),
+    VL_ALTITUDE = as.numeric(VL_ALTITUDE),
+    V2 = as.factor(V2)
+  ) %>%
+  st_as_sf(coords = c("VL_LONGITUDE", "VL_LATITUDE"), crs = 4326)
+
+# 3. Plotar
+ggplot() +
+  geom_sf(data = rs, fill = "gray95", color = "gray60") +
+  geom_sf(data = bd_sf, aes(color = V2, size = VL_ALTITUDE), alpha = 0.8) +
+  scale_size_continuous(range = c(2, 8)) +
+  scale_color_brewer(palette = "Set1") +
+  theme_minimal() +
+  labs(
+    title = "Agrupamento das Estações Meteorológicas no RS",
+    color = "Grupo",
+    size = "Altitude (m)"
+  )
+
+
+
+
+
+
 
 
 
