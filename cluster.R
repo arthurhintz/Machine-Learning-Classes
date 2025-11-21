@@ -115,7 +115,7 @@ best_k  <- sse_tbl |>
   slice_min(num_clusters, n = 1) |>
   pull(num_clusters)
 
-best_k = 5
+best_k = 4
 
 # 7) Ajuste final com k fixo ---------------------------------------------------
 k_spec_final <- k_means(num_clusters = best_k) |>
@@ -390,6 +390,7 @@ ab <- bb %>%
 library(geobr)
 library(sf)
 
+prod_c <- stats::predict(ajuste_final, new_data = dados_f)
 
 rs <- read_state(code_state = "RS", year = 2020)
 
@@ -400,13 +401,14 @@ bd <- data.frame(
   Prod = prod_c$.pred
 )
 
+
 bd_sf <- st_as_sf(bd, coords = c("Longitude", "Latitude"), crs = 4326)
 
 
 # 3. Plotar
 ggplot() +
   geom_sf(data = rs, fill = "gray95", color = "gray60") +
-  geom_sf(data = bd_sf, aes(color = Cluster, size = Prod), alpha = 0.8) +
+  geom_sf(data = bd_sf, aes(color = cluster, size = Prod), alpha = 0.8) +
   scale_size_continuous(range = c(2, 8)) +
   scale_color_brewer(palette = "Set1") +
   theme_minimal() +
@@ -431,7 +433,7 @@ buf <- st_buffer(bd_proj, dist = raio_km)
 
 # Dissolver buffers por cluster (cria áreas contínuas)
 regioes <- buf %>%
-  group_by(Cluster) %>%
+  group_by(cluster) %>%
   summarise(geometry = st_union(geometry)) %>%
   st_as_sf()
 
@@ -441,8 +443,8 @@ regioes <- st_transform(regioes, 4326)
 # Plot
 ggplot() +
   geom_sf(data = rs, fill = "gray95", color = "gray70") +
-  geom_sf(data = regioes, aes(fill = Cluster), alpha = 0.45, color = NA) +
-  geom_sf(data = bd_sf, aes(color = Cluster, size = Prod), alpha = 0.9) +
+  geom_sf(data = regioes, aes(fill = cluster), alpha = 0.45, color = NA) +
+  geom_sf(data = bd_sf, aes(color = cluster, size = Prod), alpha = 0.9) +
   scale_fill_brewer(palette = "Set1") +
   scale_color_brewer(palette = "Set1") +
   scale_size_continuous(range = c(2, 8)) +
@@ -475,8 +477,8 @@ vor_clip <- st_intersection(vor_df, rs)
 # 7. Plotar
 ggplot() +
   geom_sf(data = rs, fill = "gray95", color = "gray70") +
-  geom_sf(data = vor_clip, aes(fill = Cluster), alpha = 0.5, color = NA) +
-  geom_sf(data = bd_sf, aes(color = Cluster, size = Prod), alpha = 0.9) +
+  geom_sf(data = vor_clip, aes(fill = cluster), alpha = 0.5, color = NA) +
+  geom_sf(data = bd_sf, aes(color = cluster, size = Prod), alpha = 0.9) +
   scale_fill_brewer(palette = "Set1") +
   scale_color_brewer(palette = "Set1") +
   theme_minimal() +
@@ -503,7 +505,7 @@ bd_sf <- st_as_sf(
     Latitude = dados$Latitude,
     Longitude = dados$Longitude,
     Cluster = clusters,
-    Prod = prod_c$.pred
+    Prod = factor(prod_c$.pred)
   ),
   coords = c("Longitude", "Latitude"),
   crs = 4326
@@ -536,8 +538,8 @@ vor_plot <- st_transform(vor_clip, 4326)
 # 9. Plot
 ggplot() +
   geom_sf(data = rs_plot, fill = "gray95", color = "gray70") +
-  geom_sf(data = vor_plot, aes(fill = cluster), alpha = 0.6, color = NA) +
-  geom_sf(data = bd_plot, aes(color = cluster, size = Prod), alpha = 0.8) +
+  geom_sf(data = vor_plot, aes(fill = Prod), alpha = 0.6, color = NA) +
+  geom_sf(data = bd_plot, aes(color = Prod), alpha = 0.8) +
   scale_fill_brewer(palette = "Set1") +
   scale_color_brewer(palette = "Set1") +
   theme_minimal() +
