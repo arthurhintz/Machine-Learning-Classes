@@ -1,6 +1,4 @@
 
-
-
 suppressMessages({
   library(tidymodels)   
   library(tidyclust)    
@@ -314,7 +312,7 @@ modelo <- parsnip::decision_tree(
   parsnip::set_mode("regression")
 
 # Validação cruzada ####
-set.seed(123)
+
 bases_Cross <- rsample::vfold_cv(treino, v = 5)
 
 # Grade de hiperparâmetros ####
@@ -380,7 +378,7 @@ ab <- bb %>%
   group_by(cluster) %>%
   summarise(producao = mean(.pred)) 
 
-
+View(ab)
 
 #==========/==========/==========/==========/==========/==========/==========/==========/
 
