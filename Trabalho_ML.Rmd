@@ -3,53 +3,65 @@ title: "Métodos de Machine Learning na Produtividade de Soja"
 author: "Arthur Hintz, Lucas Sartor"
 date: "`r format(Sys.time(), '%d %b %Y')`"
 output:
-  pdf_document:
+  bookdown::pdf_document2:
+    latex_engine: xelatex
+    number_sections: true       # numera seções automaticamente
+    fig_caption: true           # ativa legendas automáticas em figuras
+    toc: true                   # adiciona sumário
+    toc_depth: 2                # profundidade do sumário
+fontsize: 11pt
+geometry: margin=2.5cm
+linkcolor: blue
+urlcolor: blue
+colorlinks: true
+header-includes:
+  - \usepackage{indentfirst}
+  - \setlength{\parindent}{1.25cm}
+  - \setlength{\parskip}{0pt}
+  - \usepackage{ragged2e}
+  - \justifying
 ---
 
+
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(dpi = 200)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+knitr::opts_chunk$set(fig.width=6, fig.height=4)
 ```
 
-```{css, echo = FALSE}
-body {
-  text-align: justify;
-}
-```
 
-```{r, message=FALSE, include=FALSE}
-library(wooldridge)
+```{r, include=FALSE}
 library(tidyverse)
-library(hnp)
-library(lmtest)
-library(car) 
-library(tseries)
-library(corrplot)
-library(knitr)
 library(kableExtra)
 library(skimr)
+library(corrplot)
 library(tidytext)
 ```
 
+```{r, include=FALSE}
+dados_ml <- read.csv2("dados_ml.csv") 
+dados <- dados_ml
+```
 
 # Resumo
 
-|       O trabalho tem como objetivo realizar uma análise de regressão linear múltipla para estimar a produtividade de soja em (Kg/ha) com base nos principais fatores que a influenciam. A análise será dividida em quatro etapas principais: análise descritiva, ajuste do modelo, diagnóstico de influência e teste das suposições do modelo.
+  Este relatório descreve a execução de um projeto de Machine Learning no âmbito da disciplina, fazendo o uso inicialmente de um modelo não supervisionado e posteriormente supervisionado. São apresentados objetivos, dados, metodologia, resultados e análises de sensibilidade, com ênfase em validação, regularização e reprodutibilidade. Para validação, empregamos cross-validation (CV)
+
+   O trabalho tem como objetivo realizar uma análise de regressão linear múltipla para estimar a produtividade de soja em (Kg/ha) com base nos principais fatores que a influenciam. A análise será dividida em quatro etapas principais: análise descritiva, ajuste do modelo, diagnóstico de influência e teste das suposições do modelo.
 
 # Introdução
 
-|       Segundo a Confederação da Agricultura e Pecuária do Brasil (CNA), o Produto Interno Bruto (PIB) do Agronegócio corresponde a 23,8% em 2023, sendo a soja a commodity de maior valor de produção no Brasil, de acordo com dados divulgados pelo IBGE, [link de acesso](https://www.ibge.gov.br/explica/producao-agropecuaria/). Na produção de soja, muitos fatores influenciam o resultado, sendo vários deles incontroláveis, como fatores climáticos. Este ano, por exemplo, houve um aumento de 70,83% na produtividade em relação ao ano anterior, provavelmente relacionado ao volume de precipitação.
+  Segundo a Confederação da Agricultura e Pecuária do Brasil (CNA), o Produto Interno Bruto (PIB) do Agronegócio corresponde a 23,8% em 2023, sendo a soja a commodity de maior valor de produção no Brasil, de acordo com dados divulgados pelo IBGE, obtidos no [link](https://www.ibge.gov.br/explica/producao-agropecuaria/). Na produção de soja, muitos fatores influenciam o resultado, sendo vários deles incontroláveis, como fatores climáticos. Este ano, por exemplo, houve um aumento de 70,83% na produtividade em relação ao ano anterior, provavelmente relacionado ao volume de precipitação.
+  Dessa forma, torna-se necessário estimar a produtividade da soja e verificar quais são as principais variáveis que a influenciam, permitindo realizar predições da safra e estimar o potencial de produção a nível nacional.
+  Inicialmente, será realizada uma análise descritiva dos dados para compreender as variáveis envolvidas e suas inter-relações. Em seguida, o modelo de regressão linear múltipla será ajustado para identificar os fatores mais significativos que afetam a produtividade da soja. O diagnóstico de influência ajudará a identificar pontos de dados que têm um impacto desproporcional no ajuste do modelo, possibilitando a correção ou análise adicional desses pontos. Finalmente, as suposições do modelo de regressão linear serão testadas para garantir a validade das conclusões obtidas.
+  Os dados utilizados neste estudo foram disponibilizados pela empresa Crops Team e foram coletados a partir de experimentos com cultivares de soja realizados em diversos locais do estado do Rio Grande do Sul durante as safras de 2021/2022 e 2022/2023.
+   Este estudo é importante porque permite identificar os principais determinantes da produtividade da soja, fornecendo insights valiosos para a tomada de decisões agrícolas e a otimização dos rendimentos das cultivares. Ao compreender melhor os fatores que influenciam a produtividade, produtores e pesquisadores podem implementar práticas agrícolas mais eficazes.
 
-|       Dessa forma, torna-se necessário estimar a produtividade da soja e verificar quais são as principais variáveis que a influenciam, permitindo realizar predições da safra e estimar o potencial de produção a nível nacional.
+# Conjunto de Dados
 
-|       Inicialmente, será realizada uma análise descritiva dos dados para compreender as variáveis envolvidas e suas inter-relações. Em seguida, o modelo de regressão linear múltipla será ajustado para identificar os fatores mais significativos que afetam a produtividade da soja. O diagnóstico de influência ajudará a identificar pontos de dados que têm um impacto desproporcional no ajuste do modelo, possibilitando a correção ou análise adicional desses pontos. Finalmente, as suposições do modelo de regressão linear serão testadas para garantir a validade das conclusões obtidas.
-
-|       Os dados utilizados neste estudo foram disponibilizados pela empresa Crops Team e foram coletados a partir de experimentos com cultivares de soja realizados em diversos locais do estado do Rio Grande do Sul durante as safras de 2021/2022 e 2022/2023.
-
-|       Este estudo é importante porque permite identificar os principais determinantes da produtividade da soja, fornecendo insights valiosos para a tomada de decisões agrícolas e a otimização dos rendimentos das cultivares. Ao compreender melhor os fatores que influenciam a produtividade, produtores e pesquisadores podem implementar práticas agrícolas mais eficazes.
-
-# Dados
-
-|       O banco de dados, inicialmente, continha informações dos 4 blocos de ensaios para cada cultivar. Posteriormente, foi calculada a média dos blocos por cultivar, resultando em 1513 observações e 33 variáveis. Entretanto, após o precesso de filtragens e tratamento de valores faltantes, esses números foram reduzidos. As variáveis do banco de dados incluem informações sobre as cultivares, características do local, dados climáticos durante o período dos experimentos e componentes químicos do solo. 
+  O banco de dados, inicialmente, continha informações dos 4 blocos de ensaios para cada cultivar. Posteriormente, foi calculada a média dos blocos por cultivar, resultando em `r nrow(dados)` observações e `r ncol(dados)` variáveis. Entretanto, após o precesso de filtragens e tratamento de valores faltantes, esses números foram reduzidos. As variáveis do banco de dados incluem informações sobre as cultivares, características do local, dados climáticos durante o período dos experimentos e componentes químicos do solo. 
 
 -   **Cultivares:** Informações sobre as diferentes variedades de soja utilizadas nos experimentos.
 
@@ -60,77 +72,56 @@ library(tidytext)
 -   **Componentes Químicos do Solo:** Dados sobre a composição química do solo, incluindo níveis de nutrientes e pH.
 
 
-|       Dentre essas principais características, as variáveis mais significativas utilizadas no modelo foram:
+A Tabela \@ref(tab:dados) apresenta uma amostra aleatória de 10 linhas do conjunto de dados final.
+```{r tab:dados, tab.cap="Banco de Dados."}
+set.seed(8)
+dados_t <- dados[sample(nrow(dados)),]
 
-1.  `Terras`: divididas em (Altas ou Baixas)
-2.  `Ambiente`: dividido em (Sequeiro ou Irrigado)
-3.  `Cultura_Ant`: ("arroz e pousio","aveia", "aveia branca", "aveia e centeio", "aveia e ervilhaca", "azevem", "cevada", nabo")
-4.  `P_base`: Quantidade de adubação de Fósforo
-5.  `N_base`: Quantidade de adubação de Nitrogênio
-6.  `Produtividade`: Produtividade de soja (Kg/ha)
-7.  `GMR`: Grupo de maturação relativo
-8.  `Espacamento`: Espaçamento entre linhas do plantio de soja
-9.  `Temperatura_Max`: média da temperatura máxima durante o périodo
-10. `PH`: PH do solo
-11. `M.O.(%)`: Matéria orgânica (%)
-12. `Epoca_de_semeadura`: Data de plantio
-
-```{r, warning=FALSE, include=FALSE}
-
-dados_ml <- read.csv2("dados_ml.csv") 
-
-dados <- dados_ml
-
+knitr::kable(head(dados_t, 10)) |>
+  kableExtra::kable_styling(font_size = 10, full_width = FALSE)
 ```
 
-Sendo as primeiras colunas e observações dadas por:
-```{r, echo=FALSE}
 
-dados |> 
-  dplyr::select(1:12) |> 
-  head(n = 5) |> 
-  kable() |> 
-  kable_styling(font_size = 10, full_width = FALSE)
-```
+Inicialmente foram criadas e ajustadas algumas variáveis:
+
+1. Foi criada a variável *dias* a partir da data de semeadura, dessa forma ela entra no modelo como o numero do dia do ano que foi plantado a soja
+1. Todas as variáveis que não eram do tipo numéricas foram transformadas para do tipo fator
+
 
 # Análise Descritiva
+  As análises dos dados referem-se a um processo crítico em relação produtividade de soja no RS. Dessa forma, foi verificado medidas de tendência central, medidas de disperção, as relações entre as variáveis e suas distribuições.
 
-|       As análises dos dados referem-se a um processo crítico em relação produtividade de soja no RS. Dessa forma, foi verificado medidas de tendência central, medidas de disperção, as relações entre as variáveis e suas distribuições.
-
-```{r, echo=FALSE }
+```{r, results='hide'}
 skim(dados) |> 
+  as.data.frame() |> 
   dplyr::select(-complete_rate, -numeric.hist)
-
-# remover hist tbm, caso não tenha espaço
 ```
 
-|       Podemos verificar valores faltantes em algumas variáveis no banco de dados, dessa forma, foram retiradas essas observações devido a falta de informação para o preenchimento correto desses NA's. Além disso, podemos ter uma ideia da média e da distribuição dos dados
+ Podemos verificar valores faltantes em algumas variáveis no banco de dados, dessa forma, foram retiradas essas observações devido a falta de informação para o preenchimento correto desses NA's. Além disso, podemos ter uma ideia da média e da distribuição dos dados
 
-```{r, echo=FALSE}
+```{r}
 dados <- na.omit(dados)
 
 numeric_data <- dados %>% 
   select_if(is.numeric)
 
 corr_matrix <- cor(numeric_data)
-
 ```
 
-|       Com o gráfico a seguir, podemos verificar as principais correlações entre as variáveis numéricas e já procurar possiveis casos de multicolinearidade e variáveis que podem ser mais significativas para estimar a produtividade de soja
+  Com o gráfico a seguir, podemos verificar as principais correlações entre as variáveis numéricas e já procurar possiveis casos de multicolinearidade e variáveis que podem ser mais significativas para estimar a produtividade de soja
 
-```{r, echo=FALSE,fig.height=10, fig.width=11, dpi=200}
+```{r}
 corrplot(corr_matrix, method = "circle", type = "upper")
 ```
 
-|       O gráfico de correlação entre as variáveis pode ser interpretado a partir do tamanho dos círculos e da cor. Quanto maior o círculo e mais escura é a cor mais forte é a correlação, também, se puxar mais para o azul é positiva, se for vermelha é negativa.
+ O gráfico de correlação entre as variáveis pode ser interpretado a partir do tamanho dos círculos e da cor. Quanto maior o círculo e mais escura é a cor mais forte é a correlação, também, se puxar mais para o azul é positiva, se for vermelha é negativa.
 
-|       Principais medidas da variável de interesse e um gráfico para mostrar frequência de produtividade
 
-**Média da produtividade:** `r round(mean(dados$Produtividade))`
 
-**Desvio padrão da produtividade:** `r round(sd(dados$Produtividade))`
+```{r}
 
-```{r, echo=FALSE, dpi= 200}
+
+
 hist(dados$Produtividade,
      col="#cae9ff",
      border="black",
@@ -145,7 +136,7 @@ legend(x="topright", c("Media"),
 
 O gráfico de boxplot mostra a relação entre os anos das safras com a produtividade
 
-```{r, dpi=200, echo=FALSE}
+```{r}
 ggplot(dados) +
   aes(y = Produtividade, 
       fill = Safra, group = Safra) +
@@ -159,10 +150,10 @@ ggplot(dados) +
         axis.ticks.x = element_blank())
 ```
 
-|       Nota-se um diferença de produtividade entre as duas safras, de certa forma a variável `Safra` deveria ser significativa para a explicação da produtividade de soja, no entanto ja tem relação com outras variáveis do modelo. Além disso, deve explicar a alta variabilidade dos erros, conforme será apresentado nas suposições do modelo.
+ Nota-se um diferença de produtividade entre as duas safras, de certa forma a variável `Safra` deveria ser significativa para a explicação da produtividade de soja, no entanto ja tem relação com outras variáveis do modelo. Além disso, deve explicar a alta variabilidade dos erros, conforme será apresentado nas suposições do modelo.
 
 
-```{r, echo=FALSE, dpi=200}
+```{r}
 dados <- dados %>%
   mutate(Local_Safra = reorder_within(Local, Produtividade, Safra))
 
@@ -181,57 +172,17 @@ ggplot(dados) +
                                    color = "black"))
 ```
 
-|       A partir do gráfico percebe-se a alta variabilidade de produtividade entre os locais de ensaio nas duas safras.
+ A partir do gráfico percebe-se a alta variabilidade de produtividade entre os locais de ensaio nas duas safras.
 
-# Ajustes dos Dados
 
-1 - Inicialmente foi removida uma cultivar experimental e cultivares com grupos de maturação relativos maiores que 7
 
-2 - Os locais Santa Rosa e Jacutinga apresentaram ser pontos influêntes para o modelo. Logo para o ajuste foi melhor remover essas observações
+# Metodologia
 
-3 - Locais os quais não tiveram uma cultura antes do plantio de soja ou tiveram mix também foram pontos de alavancagem para o modelo.
+A metodologia deste estudo foi dividida em duas etapas principais:
+(i) aprendizado não supervisionado, com o objetivo de identificar padrões nos ambientes experimentais e
+(ii) aprendizado supervisionado, voltado à predição da produtividade de soja a partir dos clusters construidos.
 
-4 - Criação da variável `mês`, relacionada a data de plantio, ou seja, invés de ter dia e mês, tem se apenas o mês
+## Aprendizado não supervisionado
 
-5 - Foi alterado a variável `Terras`, em que Baixas recebe 0 e Altas recebe 1. A variável `Ambiente`, "irrigado" = 1 e "sequeiro" = 0
 
-```{r, warning=FALSE, echo=FALSE}
-dados <-  dados |> 
-  filter(!Cultivar == "EXPERIMENTAL") |> 
-  filter(GMR <= 7) |> 
-  filter(!Produtividade == 383.250) |> 
-  filter(Produtividade < 6800) |> 
-  filter(!Local == "ITAQUI") |> 
-  filter(!Local == "SANTA ROSA") |> 
-  filter(!Cultura_Ant == "mix") |> 
-  filter(!Cultura_Ant == "soja pousio") |> 
-  filter(!Cultura_Ant == "pousio")
 
-dados_backup <- dados
-
-dados <- dados |> 
-  dplyr::select(c("Terras", "Ambiente", "Cultura_Ant", "P_base", "N_base", "Produtividade", "GMR", "Espacamento", "Temperatura_Max", "PH", "M_O", "Epoca_de_semeadura"))
-
-dados <- dados %>%
-  mutate(mes = month(Epoca_de_semeadura, label = TRUE, abbr = TRUE)) %>%
-  mutate(mes = as.character(mes))
-
-dados <- dados %>%
-  mutate(
-    Terras = recode_factor(Terras, "BAIXAS" = "0", "ALTAS" = "1"),
-    Ambiente = recode_factor(Ambiente, "IRRIGADO" = "1", "SEQUEIRO" = "0")
-  ) %>%
-  dplyr::select(-Epoca_de_semeadura)
-
-```
-
-Os dados depois de filtrados e selecionados as variáveis importantes para o modelo, é dado por:
-
-```{r, echo=FALSE}
-set.seed(8)
-dados <- dados[sample(nrow(dados)), ]
-
-kable(head(dados, n = 10)) |> 
-  kable_styling(font_size = 10, full_width = FALSE)
-  
-```

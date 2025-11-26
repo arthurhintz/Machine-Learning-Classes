@@ -1,4 +1,3 @@
-
 suppressMessages({
   library(tidymodels)   
   library(tidyclust)    
@@ -9,14 +8,11 @@ suppressMessages({
   library(tidyr)
   library(forcats)
   library(scales)
-})
+  library(lubridate)
+  })
 
-library(recipes)
-library(parsnip)
-
-library(lubridate)
-
-
+#library(recipes)
+#library(parsnip)
 tidymodels::tidymodels_prefer()
 
 theme_set(ggplot2::theme_grey(base_size = 13))
@@ -243,7 +239,7 @@ p_pca <- ggplot(pc_df, aes(PC1, PC2, color = cluster)) +
   stat_ellipse(type = "norm", linewidth = 0.6, alpha = 0.3) +
   geom_point(alpha = 0.7, size = 1.7) +
   labs(
-    title    = "Visualização em PCA",
+    title    = "",
     subtitle = paste0("Variância explicada: PC1 = ", percent(var_exp[1]),
                       ", PC2 = ", percent(var_exp[2])),
     x = "PC1",
@@ -251,6 +247,11 @@ p_pca <- ggplot(pc_df, aes(PC1, PC2, color = cluster)) +
     color = "Cluster"
   ) +
   base_theme
+
+p_pca
+ggsave("pca.pdf", p_pca, width = 5, height = 3, 
+       units = "in", dpi = 200)
+
 
 # D) Heatmap de centros padronizados
 p_centers <- centros_long |>
