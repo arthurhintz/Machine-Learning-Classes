@@ -17,7 +17,7 @@ tidymodels::tidymodels_prefer()
 
 theme_set(ggplot2::theme_grey(base_size = 13))
 
-set.seed(81995)
+set.seed(1248)
 
 dados_ml <- read.csv2("dados_ml.csv") 
 
@@ -274,7 +274,7 @@ grade <- dials::grid_latin_hypercube(
   dials::cost_complexity(),
   dials::tree_depth(),
   dials::min_n(),
-  size = 100
+  size = 300
 )
 
 # Tunagem ####
@@ -358,7 +358,7 @@ bd_sf <- st_as_sf(bd, coords = c("Longitude", "Latitude"), crs = 4326)
 
 
 # 3. Plotar
-ggplot() +
+graph1 <- ggplot() +
   geom_sf(data = rs, fill = "gray95", color = "gray60") +
   geom_sf(data = bd_sf, aes(color = cluster, size = Prod), alpha = 0.8) +
   scale_size_continuous(range = c(2, 8)) +
@@ -370,7 +370,8 @@ ggplot() +
     size = "Produtividade"
   )
 
-
+ggsave("mapa_cluster.pdf", graph1, width = 5, height = 3, 
+       units = "in", dpi = 200)
 
 
 # opção 2
@@ -451,13 +452,17 @@ ggplot() +
 rs <- read_state(code_state = "RS", year = 2020)
 rs <- st_transform(rs, 31983)  # projeta para metros
 
+prod_c
+
+round(prod_c$.pred, 2)
+
 # 2. Dados como sf
 bd_sf <- st_as_sf(
   data.frame(
     Latitude = dados$Latitude,
     Longitude = dados$Longitude,
     Cluster = clusters,
-    Prod = factor(prod_c$.pred)
+    Prod = factor(round(prod_c$.pred, 2))
   ),
   coords = c("Longitude", "Latitude"),
   crs = 4326
@@ -488,7 +493,7 @@ vor_plot <- st_transform(vor_clip, 4326)
 
 
 # 9. Plot
-ggplot() +
+graph2 <- ggplot() +
   geom_sf(data = rs_plot, fill = "gray95", color = "gray70") +
   geom_sf(data = vor_plot, aes(fill = Prod), alpha = 0.6, color = NA) +
   geom_sf(data = bd_plot, aes(color = Prod), alpha = 0.8) +
@@ -496,11 +501,15 @@ ggplot() +
   scale_color_brewer(palette = "Set1") +
   theme_minimal() +
   labs(
-    title = "Regiões de Cluster (apenas áreas até 50 km dos pontos)",
+    title = "",
     fill = "Cluster",
     color = "Cluster",
     size = "Prod"
   )
+
+graph2
+ggsave("mapa_prod.pdf", graph2, width = 5, height = 3, 
+       units = "in", dpi = 200)
 
 
 

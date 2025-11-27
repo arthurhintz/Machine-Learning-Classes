@@ -79,12 +79,14 @@ Além disso:
 
 1. Todas as variáveis não numéricas foram convertidas para fatores (factors) antes da modelagem.
 
-Dessa forma, resultou na seguinte Tabela \@ref(tab:dados) que apresenta uma amostra aleatória de 10 linhas do conjunto de dados final.
-```{r tab:dados, tab.cap="Banco de Dados."}
+Dessa forma, resultou na seguinte Tabela `@ref(tab:dados)` que apresenta uma amostra aleatória de 10 linhas do conjunto de dados final.
+```{r}
 set.seed(8)
-dados_t <- dados[sample(nrow(dados)),]
+dados_t <- dados[sample(nrow(dados)), c("Safra", "COD_PROD", "Local", "Terras", "Ambiente", "Cultivar", "Cultura_Ant")]
 
-knitr::kable(head(dados_t, 10)) |>
+rownames(dados_t) <- NULL
+
+knitr::kable(head(dados_t, 10), caption = "Exemplo das variáveis qualitativa", label = "dados") |>
   kableExtra::kable_styling(font_size = 10, full_width = FALSE)
 ```
 
@@ -93,9 +95,32 @@ knitr::kable(head(dados_t, 10)) |>
 # Análise Descritiva
   As análises dos dados referem-se a um processo crítico em relação produtividade de soja no RS. Dessa forma, foi verificado medidas de tendência central, medidas de disperção, as relações entre as variáveis e suas distribuições.
 
-```{r, results='asis'}
-skim(dados) |>
+```{r}
+a <- skim(dados) |>
   dplyr::select(-complete_rate, -numeric.hist)
+
+chara <- a |> 
+  filter(skim_type == "character") |> 
+  select(skim_variable, n_missing, character.n_unique) |> 
+  rename(variaveis = skim_variable, n_faltantes = n_missing, n_categorias = character.n_unique)
+
+knitr::kable(chara, caption = "Tabela das variáveis qualitativas") |>
+  kableExtra::kable_styling(font_size = 10, full_width = FALSE)
+```
+
+
+```{r}
+nume <- a |> 
+  filter(skim_type == "numeric") |> 
+  select(skim_variable, numeric.mean, numeric.sd, numeric.p0, numeric.p25,
+         numeric.p50, numeric.p75, numeric.p100) |> 
+  rename(variaveis = skim_variable, media = numeric.mean, dp= numeric.sd,
+         min = numeric.p0, quartil_25 = numeric.p25, mediana = numeric.p50, 
+         quartil_75 = numeric.p75, max = numeric.p100) |> 
+  mutate(round(across(!variaveis), 2)) 
+
+knitr::kable(nume, caption = "Tabela das variáveis quantitativas") |>
+  kableExtra::kable_styling(font_size = 10, full_width = FALSE)
 ```
 
  Podemos verificar valores faltantes em algumas variáveis no banco de dados, dessa forma, foram retiradas essas observações devido a falta de informação para o preenchimento correto desses NA's. Além disso, podemos ter uma ideia da média e da distribuição dos dados
@@ -108,7 +133,7 @@ numeric_data <- dados %>%
 
 corr_matrix <- cor(numeric_data)
 ```
-```{r corplot, fig.cap= "Corplot das Variáveis Numéricas", fig.width=8, fig.height=5}
+```{r corplot, fig.cap= "Corplot das Variáveis Numéricas", fig.width=8, fig.height=5, dpi= 200}
 corrplot(corr_matrix, method = "circle", type = "lower", 
          tl.cex = 0.6, order = 'AOE')
 ```
@@ -205,6 +230,15 @@ em que $C_k$ representa o conjunto de observações atribuídas ao cluster k e $
 É importante destacar que o WSS sempre diminui à medida que o número de clusters aumenta, mesmo quando essa divisão não corresponde a uma estrutura real dos dados. Dessa forma, torna-se necessário identificar um ponto após o qual o decréscimo no WSS deixa de ser significativo — o chamado método do cotovelo.
 
 No presente estudo, ainda que o WSS apresentasse redução contínua para valores crescentes de K, essa redução ocorreu de maneira aproximadamente linear, sem indicar um cotovelo claramente definido. Assim, considerando também o conhecimento prévio sobre a estrutura dos ambientes experimentais e a necessidade de manter interpretabilidade, optou-se por adotar K = 4 clusters.
+
+## Aprendizado supervisionado
+
+
+
+
+
+
+# Resultados
 
 Para inspeção visual dos clusters, realizou-se uma Análise de Componentes Principais (PCA), um método que projeta os dados para um espaço de menor dimensão preservando a maior variabilidade possível. O primeiro componente principal é definido por:
 
