@@ -79,6 +79,7 @@ autoplot(res)
 tab  <- collect_metrics(res)
 tab
 
+tab$.metric
 
 sse_tbl <- tab |> 
   filter(.metric == "sse_ratio") |> 
@@ -199,35 +200,6 @@ base_theme <- theme_minimal(base_size = 13) +
     axis.title.y     = element_text(margin = margin(r = 6))
   )
 
-# A) Curva tipo cotovelo
-p_elbow <- sse_tbl |>
-  ggplot(aes(x = num_clusters, y = mean)) +
-  geom_ribbon(aes(ymin = mean - std_err, ymax = mean + std_err), alpha = 0.12) +
-  geom_line(linewidth = 0.9) +
-  geom_point(size = 2) +
-  geom_vline(xintercept = best_k, linetype = 2) +
-  labs(
-    title    = "Curva tipo cotovelo — sse_ratio (CV 5-fold)",
-    subtitle = paste0("k escolhido pela regra do 1-SE: k = ", best_k),
-    x        = "Número de clusters (k)",
-    y        = "sse_ratio médio  (menor é melhor)"
-  ) +
-  base_theme
-
-# B) Silhueta por cluster
-p_sil <- sil_tbl |>
-  mutate(cluster = factor(cluster)) |>
-  ggplot(aes(x = cluster, y = sil_width)) +
-  geom_boxplot(outlier.alpha = 0.15, width = 0.6) +
-  geom_hline(yintercept = 0, linewidth = 0.6, linetype = 2) +
-  annotate("text", x = Inf, y = Inf, hjust = 1.05, vjust = 1.6,
-           label = paste0("Silhueta média = ", number(mean_sil, accuracy = 0.001))) +
-  labs(
-    title = "Qualidade da partição — silhueta",
-    x = "Cluster",
-    y = "Largura de silhueta"
-  ) +
-  base_theme
 
 # C) PCA bidimensional
 pca   <- prcomp(X_norm, scale. = FALSE, center = FALSE)  # já normalizado no recipe
@@ -251,25 +223,6 @@ p_pca <- ggplot(pc_df, aes(PC1, PC2, color = cluster)) +
 p_pca
 ggsave("pca.pdf", p_pca, width = 5, height = 3, 
        units = "in", dpi = 200)
-
-
-# D) Heatmap de centros padronizados
-p_centers <- centros_long |>
-  ggplot(aes(x = variavel, y = cluster, fill = centro_z)) +
-  geom_tile() +
-  scale_fill_gradient2(low = muted("blue"), mid = "white", high = muted("red")) +
-  labs(
-    title = "Centros padronizados por variável",
-    x     = "Variável",
-    y     = "Cluster",
-    fill  = "Centro (z-score)"
-  ) +
-  base_theme +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-# Layout final
-print((p_elbow | p_sil) / (p_pca | p_centers))
-
 
 
 
