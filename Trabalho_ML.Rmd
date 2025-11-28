@@ -93,7 +93,7 @@ knitr::kable(head(dados_t, 10), caption = "Exemplo das variáveis qualitativa", 
 
 
 # Análise Descritiva
-  As análises dos dados referem-se a um processo crítico em relação produtividade de soja no RS. Dessa forma, foi verificado medidas de tendência central, medidas de disperção, as relações entre as variáveis e suas distribuições.
+A análise descritiva dos dados constitui uma etapa fundamental para compreender o comportamento da produtividade de soja no Rio Grande do Sul. Nessa fase, foram avaliadas medidas de tendência central e de dispersão, além das relações entre as variáveis e a forma das distribuições.
 
 ```{r}
 a <- skim(dados) |>
@@ -104,10 +104,13 @@ chara <- a |>
   select(skim_variable, n_missing, character.n_unique) |> 
   rename(variaveis = skim_variable, n_faltantes = n_missing, n_categorias = character.n_unique)
 
-knitr::kable(chara, caption = "Tabela das variáveis qualitativas") |>
+knitr::kable(chara, caption = "Tabela das variáveis qualitativas", label = "quali") |>
   kableExtra::kable_styling(font_size = 10, full_width = FALSE)
 ```
 
+A Tabela `@ref(tab:quali)` apresenta as variáveis qualitativas do conjunto de dados. A coluna *n_faltantes* indica a presença de valores ausentes, observando-se que apenas a variável `Cultura_Ant` possui registros faltantes. Já a coluna *n_categorias* evidencia o número de categorias existentes em cada variável qualitativa.
+
+Em complemento, a Tabela `@ref(tab:quanti)` exibe as variáveis quantitativas juntamente com suas estatísticas descritivas. São apresentados valores de média, desvio padrão, mínimo, máximo e quartis, permitindo identificar a distribuição dos dados e potenciais assimetrias ou dispersões relevantes para a modelagem.
 
 ```{r}
 nume <- a |> 
@@ -119,11 +122,14 @@ nume <- a |>
          quartil_75 = numeric.p75, max = numeric.p100) |> 
   mutate(round(across(!variaveis), 2)) 
 
-knitr::kable(nume, caption = "Tabela das variáveis quantitativas") |>
+knitr::kable(nume, caption = "Tabela das variáveis quantitativas", label = "quanti") |>
   kableExtra::kable_styling(font_size = 10, full_width = FALSE)
 ```
 
- Podemos verificar valores faltantes em algumas variáveis no banco de dados, dessa forma, foram retiradas essas observações devido a falta de informação para o preenchimento correto desses NA's. Além disso, podemos ter uma ideia da média e da distribuição dos dados
+
+
+
+
 
 ```{r}
 dados <- na.omit(dados)
