@@ -81,7 +81,7 @@ Além disso:
 
 Dessa forma, resultou na seguinte Tabela `@ref(tab:dados)` que apresenta uma amostra aleatória de 10 linhas do conjunto de dados final.
 ```{r}
-set.seed(8)
+set.seed(1248)
 dados_t <- dados[sample(nrow(dados)), c("Safra", "COD_PROD", "Local", "Terras", "Ambiente", "Cultivar", "Cultura_Ant")]
 
 rownames(dados_t) <- NULL
@@ -210,7 +210,7 @@ A metodologia adotada neste estudo foi dividida em duas etapas principais:
 
 ## Aprendizado não supervisionado
 
-  Para a etapa não supervisionada, empregou-se o algoritmo K-Means, cuja finalidade é particionar as observações em K grupos distintos, de modo que exista alta homogeneidade intra-cluster e heterogeneidade inter-cluster. Cada observação pertence exclusivamente a um único grupo, e a definição dos clusters é realizada minimizando a variabilidade interna de cada conjunto.
+  Para a etapa não supervisionada, empregou-se o algoritmo K-Means, cuja finalidade é particionar as observações em K grupos distintos, de modo que exista alta homogeneidade dentro dos clusters e heterogeneidade entre os cluster. Cada observação pertence exclusivamente a um único grupo, e a definição dos clusters é realizada minimizando a variabilidade interna de cada conjunto.
   Sejam $C_1, \cdots, C_K$ os conjuntos de índices das observações pertencentes a cada cluster e seja $X \in R^{n\times p}$ a matriz de dados padronizados. O critério otimizado pelo K-Means pode ser escrito como:
 $$
 \underset{C_1,...,C_K}{\operatorname*{\operatorname*{\operatorname*{minimize}}}}\left\{\sum_{k=1}^K\frac{1}{|C_k|}\sum_{i,i^{\prime}\in C_k}\sum_{j=1}^p(x_{ij}-x_{i^{\prime}j})^2\right\}.
@@ -239,9 +239,28 @@ No presente estudo, ainda que o WSS apresentasse redução contínua para valore
 
 ## Aprendizado supervisionado
 
+Com os dados previamente particionados em 4 clusters com base na similaridade das variáveis analisadas, torna-se necessário verificar se essa segmentação também se reflete na variável produtividade, dado que essa variável não foi utilizada para atribuir os grupos. Caso os clusters apresentem diferenças significativas nos níveis de produtividade, será possível inferir que essa variável é influenciada pelas demais variáveis consideradas e que a estrutura de clusters obtida é adequada para
+avaliar a produção.
 
+Para verificar se a produtividade pode ser explicada pelos clusters, é preciso  empregar um método de aprendizado supervisionado, no qual há uma variável resposta a ser prevista e um conjunto de variáveis explicativas utilizadas para modelar essa previsão.
+O método supervisionado escolhido foi o de árvore de regressão com apenas os
+clusters determinando a produtividade.
 
+Uma árvore de regressão é um modelo que realiza a predição de uma variável resposta por meio da construção de uma estrutura hierárquica de decisões. Trata-se de um particionamento do espaço das variáveis explicativas, essas divisões podem ser chamadas de nó. Em cada etapa procura-se
+a variável que minimiza a soma de quadrados de suas respectivas regiões.
 
+Cada particionamento é definido por:
+
+$$\min_{j, s} \left[\sum_{x_i \in R_1(j,s)} (y_i - \bar{y}_{R_1})^2+\sum_{x_i \in R_2(j,s)} (y_i - \bar{y}_{R_2})^2\right]. $$
+
+em que $j$ representa as variáveis explicativas, $s$ corresponde ao ponto de corte,
+$X$ são cada linha do banco de dados, $R_1(j,s)$ e $R_2(j,s)$ são as regiões em que $X_j$ são menores ou iguais ao ponto de corte ou maior que o ponto de corte respectivamente. $\bar{y}_R$ é a média da variável resposta em cada região.
+
+Esse processo acontece até que o número mínimo de observações por nó ou o máximo de profundidade da árvore sejam atingidos. Além disso há um custo de complexidade que define se vale a pena uma divisão extra. Esses são hiperparâmetros que foram
+tunados antes do ajuste para encontrar o melhor modelo.
+
+O modelo por fim estima valores de produtividade para minimizar essa soma para cada
+um dos clusters. 
 
 
 # Resultados
@@ -258,4 +277,12 @@ A PCA permite representar os clusters em duas dimensões, fornecendo uma visão 
 knitr::include_graphics("pca.pdf")
 ```
 
+A partir do método supervisionado é possível estimar a produtividade associada
+para cada cluster:
 
+
+Os resultados mostram diferenças expressivas nas médias de cada grupo, colaborando com a tese de que características semelhantes influenciam em sua produtividade final.
+
+Além disso é interessante notar o padrão geográfico de cada cluster a partir de um mapa do Rio Grande do Sul. Nele será apresentado as médias de cada grupo e sua localização:
+
+Esse mapa mostra divisões do estado e sua influência na divisão dos clusters e suas produtividades. Sendo assim é possível notar o quão relevante é os fatores naturais de cada região.
