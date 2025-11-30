@@ -127,22 +127,14 @@ knitr::kable(nume, caption = "Tabela das variáveis quantitativas", label = "qua
 ```
 
 
-
-
-
-
 ```{r}
 dados <- na.omit(dados)
-
-numeric_data <- dados %>% 
-  select_if(is.numeric)
-
-corr_matrix <- cor(numeric_data)
 ```
-```{r corplot, fig.cap= "Corplot das Variáveis Numéricas", fig.width=8, fig.height=5, dpi= 200}
-corrplot(corr_matrix, method = "circle", type = "lower", 
-         tl.cex = 0.6, order = 'AOE')
+
+```{r corplot, fig.cap= "Corplot das Variáveis Numéricas"}
+knitr::include_graphics("corplot.pdf")
 ```
+
 
   A Figura `@ref(fig:corplot)` apresenta a matriz de correlação das variáveis numéricas. A intensidade e o tamanho dos círculos permitem identificar rapidamente associações fortes — positivas quando em azul, negativas quando em vermelho. Essa etapa auxilia na identificação de possíveis casos de multicolinearidade e variáveis potencialmente relevantes para explicar a produtividade.
 
