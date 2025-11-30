@@ -221,8 +221,8 @@ p_pca <- ggplot(pc_df, aes(PC1, PC2, color = cluster)) +
   base_theme
 
 p_pca
-ggsave("pca.pdf", p_pca, width = 5, height = 3, 
-       units = "in", dpi = 200)
+#ggsave("pca.pdf", p_pca, width = 5, height = 3, 
+ #      units = "in", dpi = 200)
 
 
 
@@ -342,7 +342,14 @@ View(ab)
 library(geobr)
 library(sf)
 
-prod_c <- stats::predict(ajuste_final, new_data = dados_f)
+#prod_c <- stats::predict(ajuste_final, new_data = dados_f)
+
+
+
+produtividade <- dados2 |> 
+  group_by(Local) |> 
+  summarise(prod = mean(Produtividade))
+
 
 rs <- read_state(code_state = "RS", year = 2020)
 
@@ -350,8 +357,13 @@ bd <- data.frame(
   Latitude = dados$Latitude,
   Longitude = dados$Longitude,
   Cluster = clusters,
-  Prod = prod_c$.pred
+  Prod = dados2$Produtividade
 )
+
+
+
+  
+
 
 
 bd_sf <- st_as_sf(bd, coords = c("Longitude", "Latitude"), crs = 4326)
@@ -369,6 +381,8 @@ graph1 <- ggplot() +
     color = "Grupo",
     size = "Produtividade"
   )
+
+graph1
 
 ggsave("mapa_cluster.pdf", graph1, width = 5, height = 3, 
        units = "in", dpi = 200)

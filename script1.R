@@ -19,3 +19,32 @@ teste <- dados %>%
 
 # summary(dados$Produtividade)
 View(teste)
+
+
+
+#==========/==========/==========/==========/==========/==========/==========/==========/
+# corplot pdf
+
+
+dados <- na.omit(dados)
+
+numeric_data <- dados %>% 
+  select_if(is.numeric)
+
+corr_matrix <- cor(numeric_data)
+
+
+pdf("corplot.pdf", width = 6, height = 6)  
+par(mfrow = c(1,1))
+par(mar = c(1, 1, 1, 1))    
+corrplot(
+  corr_matrix,
+  method = "circle",
+  type = "lower",
+  order = "hclust",
+  tl.cex = 0.7,              # tamanho dos rótulos das variáveis
+  cl.cex = 0.7,              # tamanho da legenda (barra de cores)
+  diag = FALSE               # opcional — remove diagonal
+)
+
+dev.off()
