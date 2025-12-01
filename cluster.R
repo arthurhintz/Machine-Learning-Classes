@@ -229,12 +229,13 @@ p_pca
 aa <- cbind(clusters, dados$Local)
   
 
-ab <- aa %>%
+cl <- aa %>%
   group_by(cluster) %>%
-  summarise(locais = paste(unique(`dados$Local`), collapse = ", ")) %>%
+  summarise(Local = paste(unique(`dados$Local`), collapse = ", ")) %>%
   arrange(cluster)
 
-View(ab)
+View(cl)
+
 
 
 #==========/==========/==========/==========/==========/==========/==========/==========/
@@ -336,7 +337,6 @@ View(ab)
 
 #==========/==========/==========/==========/==========/==========/==========/==========/
 
-#==========/==========/==========/==========/==========/==========/==========/==========/
 # Mapa com os clusters
 
 library(geobr)
@@ -359,10 +359,6 @@ bd <- data.frame(
   Cluster = clusters,
   Prod = dados2$Produtividade
 )
-
-
-
-  
 
 
 
@@ -526,5 +522,36 @@ ggsave("mapa_prod.pdf", graph2, width = 5, height = 3,
        units = "in", dpi = 200)
 
 
+#==========/==========/==========/==========/==========/==========/==========/==========/
 
+rs <- read_state(code_state = "RS", year = 2020)
+
+
+cl_exp <- cl |>
+  separate_rows(Local, sep = ",\\s*")  # divide pelos ", "
+
+bd <- dados2 |> 
+  group_by(Latitude, Longitude) |>
+  summarise(Local = unique(Local), .groups = "drop",
+            Prod  = mean(Produtividade)) |> 
+  left_join(cl_exp, by = "Local") 
+
+View(bd)
+
+bd_sf <- st_as_sf(bd, coords = c("Longitude", "Latitude"), crs = 4326)
+
+
+graph <- ggplot() +
+  geom_sf(data = rs, fill = "gray95", color = "gray60") +
+  geom_sf(data = bd_sf, aes(color = cluster, size = Prod), alpha = 0.8) +
+  scale_size_continuous(range = c(2, 8)) +
+  scale_color_brewer(palette = "Set1") +
+  theme_minimal() +
+  labs(
+    title = "Agrupamento",
+    color = "Grupo",
+    size = "Produtividade"
+  )
+
+graph
 

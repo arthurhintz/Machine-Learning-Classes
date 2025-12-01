@@ -142,7 +142,13 @@ knitr::include_graphics("corplot.pdf")
 
 A Figura `@ref(fig:histprod)` mostra a distribuição da produtividade (Kg/ha) ao longo das duas safras analisadas. A linha vertical laranja indica a média geral, igual a `r round(mean(dados$Produtividade), 2)`.
 
-```{r histprod, fig.cap="Histograma da Produtividade de Soja"}
+```{r histprod, fig.cap="Histograma da Produtividade de Soja", fig.height=3}
+par(
+  cex = 0.8,            
+  mar = c(3, 3, 2, 1),  
+  mgp = c(2, 0.6, 0)
+)
+
 hist(dados$Produtividade,
      col="#cae9ff",
      border="black",
@@ -207,6 +213,7 @@ A metodologia adotada neste estudo foi dividida em duas etapas principais:
 $$
 \underset{C_1,...,C_K}{\operatorname*{\operatorname*{\operatorname*{minimize}}}}\left\{\sum_{k=1}^K\frac{1}{|C_k|}\sum_{i,i^{\prime}\in C_k}\sum_{j=1}^p(x_{ij}-x_{i^{\prime}j})^2\right\}.
 $$
+
 Em outras palavras, o método busca minimizar a soma das distâncias quadráticas entre cada observação e o centróide de seu respectivo grupo.
 O algoritmo segue as seguintes etapas:
 1. Inicialização: cada observação recebe aleatoriamente um rótulo entre 1 e K
@@ -243,8 +250,7 @@ a variável que minimiza a soma de quadrados de suas respectivas regiões.
 
 Cada particionamento é definido por:
 
-$$\min_{j, s} \left[\sum_{x_i \in R_1(j,s)} (y_i - \bar{y}_{R_1})^2+\sum_{x_i \in R_2(j,s)} (y_i - \bar{y}_{R_2})^2\right]. $$
-
+$$\min_{j, s} \left\{\sum_{y_i \in R_1(j,s)} (y_i - \bar{y}_{R_1})^2+\sum_{y_i \in R_2(j,s)} (y_i - \bar{y}_{R_2})^2\right\}, $$
 em que $j$ representa as variáveis explicativas, $s$ corresponde ao ponto de corte,
 $X$ são cada linha do banco de dados, $R_1(j,s)$ e $R_2(j,s)$ são as regiões em que $X_j$ são menores ou iguais ao ponto de corte ou maior que o ponto de corte respectivamente. $\bar{y}_R$ é a média da variável resposta em cada região.
 
@@ -258,9 +264,7 @@ um dos clusters.
 # Resultados
 
 Para inspeção visual dos clusters, realizou-se uma Análise de Componentes Principais (PCA), um método que projeta os dados para um espaço de menor dimensão preservando a maior variabilidade possível. O primeiro componente principal é definido por:
-
 $$Z_1=\phi_{11}X_1+\phi_{21}X_2+\cdots+\phi_{p1}X_p,$$
-
 em que o vetor $\phi_1 = (\phi_{11}, \phi_{21}, \cdots, \phi_{p1})^\top$ é obtido pela maximização da variância projetada sob a restrição de normalização.
 
 A PCA permite representar os clusters em duas dimensões, fornecendo uma visão clara de sua dispersão e separabilidade. A Figura `@ref(fig:pca)` ilustra esta projeção, mostrando que os quatro grupos apresentam estrutura coerente, ainda que com alguma sobreposição esperada dada a complexidade dos ambientes agrícolas.
@@ -270,11 +274,26 @@ knitr::include_graphics("pca.pdf")
 ```
 
 A partir do método supervisionado é possível estimar a produtividade associada
-para cada cluster:
-
+para cada cluster conforme pode ser visualizado na legenda da Figura `@ref(fig:mapaprod)`
 
 Os resultados mostram diferenças expressivas nas médias de cada grupo, colaborando com a tese de que características semelhantes influenciam em sua produtividade final.
 
-Além disso é interessante notar o padrão geográfico de cada cluster a partir de um mapa do Rio Grande do Sul. Nele será apresentado as médias de cada grupo e sua localização:
+Além disso é interessante notar o padrão geográfico de cada cluster a partir de um mapa do Rio Grande do Sul, como pode ser visualizado na Figura `@ref(fig:mapaprod)`. Nele é apresentado as médias de cada grupo e sua localização geográfico, junto com um raio de 100 km, supondo homogeneidade nessa região. 
+
+```{r mapaprod, fig.cap="Mapa da Produtividade Média por Cluster"}
+knitr::include_graphics("mapa_prod.pdf")
+```
 
 Esse mapa mostra divisões do estado e sua influência na divisão dos clusters e suas produtividades. Sendo assim é possível notar o quão relevante é os fatores naturais de cada região.
+
+# Conclusão
+
+Este estudo aplicou técnicas de aprendizado de máquina para analisar fatores associados à produtividade de soja no Rio Grande do Sul. A análise descritiva revelou grande variabilidade produtiva entre regiões e safras, reforçando a influência das condições edafoclimáticas.
+
+O agrupamento via K-Means permitiu segmentar os ambientes em quatro clusters com características distintas. Embora o método do cotovelo não indicasse claramente o número ideal de grupos, a escolha de quatro clusters mostrou boa interpretabilidade e coerência estrutural, evidenciada também pela análise de componentes principais.
+
+A etapa supervisionada, utilizando uma árvore de regressão, confirmou que os clusters possuem relação significativa com a produtividade, indicando que regiões com atributos semelhantes apresentam desempenhos próximos. O mapeamento espacial reforçou o papel dos fatores naturais na diferenciação produtiva.
+
+Em síntese, os resultados mostram que métodos de machine learning são úteis para identificar padrões ambientais e apoiar a predição da produtividade. Estudos futuros podem explorar modelos mais complexos e integrar novas fontes de dados para aprofundar as análises.
+
+# Referências
