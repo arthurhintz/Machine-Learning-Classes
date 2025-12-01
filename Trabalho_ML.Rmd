@@ -73,16 +73,15 @@ Este estudo é relevante pois permite identificar os principais determinantes da
 
 -   **Componentes Químicos do Solo:** Dados sobre a composição química do solo, incluindo níveis de nutrientes e pH.
 
-Além disso:
-
+<!-- Além disso:
 1. Criou-se a variável dias, representando o número do dia do ano correspondente à data de semeadura.
 
-1. Todas as variáveis não numéricas foram convertidas para fatores (factors) antes da modelagem.
+1. Todas as variáveis não numéricas foram convertidas para fatores (factors) antes da modelagem. -->
 
-Dessa forma, resultou na seguinte Tabela `@ref(tab:dados)` que apresenta uma amostra aleatória de 10 linhas do conjunto de dados final.
+Dessa forma, resultou na seguinte Tabela `@ref(tab:dados)` que apresenta uma amostra aleatória de 10 linhas do conjunto de dados final e as colunas das variáveis qualitativas .
 ```{r}
 set.seed(1248)
-dados_t <- dados[sample(nrow(dados)), c("Safra", "COD_PROD", "Local", "Terras", "Ambiente", "Cultivar", "Cultura_Ant")]
+dados_t <- dados[sample(nrow(dados)), c("Safra", "COD_PROD", "Local", "Terras", "Ambiente", "Cultivar")]
 
 rownames(dados_t) <- NULL
 
@@ -93,7 +92,7 @@ knitr::kable(head(dados_t, 10), caption = "Exemplo das variáveis qualitativa", 
 
 
 # Análise Descritiva
-A análise descritiva dos dados constitui uma etapa fundamental para compreender o comportamento da produtividade de soja no Rio Grande do Sul. Nessa fase, foram avaliadas medidas de tendência central e de dispersão, além das relações entre as variáveis e a forma das distribuições.
+A análise descritiva dos dados constitui uma etapa fundamental para compreender o comportamento da produtividade de soja no Rio Grande do Sul. Nessa fase, foram avaliadas medidas de tendência central e de dispersão, além das relações entre as variáveis e a distribuições da variável resposta.
 
 ```{r}
 a <- skim(dados) |>
@@ -126,7 +125,6 @@ knitr::kable(nume, caption = "Tabela das variáveis quantitativas", label = "qua
   kableExtra::kable_styling(font_size = 10, full_width = FALSE)
 ```
 
-
 ```{r}
 dados <- na.omit(dados)
 ```
@@ -137,8 +135,7 @@ knitr::include_graphics("corplot.pdf")
 
 
   A Figura `@ref(fig:corplot)` apresenta a matriz de correlação das variáveis numéricas. A intensidade e o tamanho dos círculos permitem identificar rapidamente associações fortes — positivas quando em azul, negativas quando em vermelho. Essa etapa auxilia na identificação de possíveis casos de multicolinearidade e variáveis potencialmente relevantes para explicar a produtividade.
-
-
+  
 
 A Figura `@ref(fig:histprod)` mostra a distribuição da produtividade (Kg/ha) ao longo das duas safras analisadas. A linha vertical laranja indica a média geral, igual a `r round(mean(dados$Produtividade), 2)`.
 
@@ -214,16 +211,17 @@ $$
 \underset{C_1,...,C_K}{\operatorname*{\operatorname*{\operatorname*{minimize}}}}\left\{\sum_{k=1}^K\frac{1}{|C_k|}\sum_{i,i^{\prime}\in C_k}\sum_{j=1}^p(x_{ij}-x_{i^{\prime}j})^2\right\}.
 $$
 
-Em outras palavras, o método busca minimizar a soma das distâncias quadráticas entre cada observação e o centróide de seu respectivo grupo.
-O algoritmo segue as seguintes etapas:
-1. Inicialização: cada observação recebe aleatoriamente um rótulo entre 1 e K
-These serve as initial cluster assignments for the observations.
+O método busca minimizar a soma das distâncias quadráticas entre cada observação e o centróide de seu respectivo grupo. O algoritmo segue as seguintes etapas:
+
+1. Inicialização: Cada observação recebe aleatoriamente um rótulo entre 1 e $K$. Estas são as atribuições iniciais de cluster para as observações.
 1. Iteração (até convergência):
-  a. recalcular os centróides de cada cluster;
-  b. reatribuir cada observação ao cluster cujo centróide apresente menor distância Euclidiana.
+  a. Recalcular os centróides de cada cluster;
+  b. Reatribuir cada observação ao cluster cujo centróide apresente menor distância Euclidiana.
 
 
-A seleção do número adequado de clusters constitui uma etapa essencial do processo de agrupamento. Neste trabalho, foram avaliados valores de $K \in \{2,3,4,5,6,7,8\}$.Para determinar o particionamento mais apropriado, utilizou-se a métrica Within-Cluster Sum of Squares (WSS), definida como a soma das distâncias quadráticas entre cada observação e o centróide de seu respectivo cluster. Essa medida reflete a coerência interna dos grupos: valores menores indicam clusters mais compactos e homogêneos.
+A seleção do número adequado de clusters ($K$) é uma etapa essencial no processo de agrupamento. Neste trabalho, a escolha do $K$ ótimo foi avaliada considerando o intervalo de valores $K \in \{2,3,4,5,6,7,8\}$. Para determinar o particionamento mais apropriado, utilizou-se a métrica Soma dos Quadrados Dentro do Cluster (Within-Cluster Sum of Squares - WSS).
+
+O WSS é definido como a soma das distâncias quadráticas entre cada observação e o centróide de seu respectivo cluster. Essa medida reflete a coerência interna dos grupos: valores menores indicam clusters mais compactos e homogêneos, o que é desejável.
 
 Formalmente, o WSS é expresso por:
 
@@ -232,9 +230,9 @@ $$\text{WSS}(K) =
 
 em que $C_k$ representa o conjunto de observações atribuídas ao cluster k e $\mu_k$ é seu centróide.
 
-É importante destacar que o WSS sempre diminui à medida que o número de clusters aumenta, mesmo quando essa divisão não corresponde a uma estrutura real dos dados. Dessa forma, torna-se necessário identificar um ponto após o qual o decréscimo no WSS deixa de ser significativo — o chamado método do cotovelo.
+A análise do WSS em função de $K$ é crucial para a aplicação do Método do Cotovelo (Elbow Method), que permite identificar o ponto de inflexão (cotovelo) onde o ganho na redução do WSS começa a diminuir significativamente, indicando o valor de $K$ que oferece um bom equilíbrio entre compacidade e número de clusters.
 
-No presente estudo, ainda que o WSS apresentasse redução contínua para valores crescentes de K, essa redução ocorreu de maneira aproximadamente linear, sem indicar um cotovelo claramente definido. Assim, considerando também o conhecimento prévio sobre a estrutura dos ambientes experimentais e a necessidade de manter interpretabilidade, optou-se por adotar K = 4 clusters.
+No presente estudo, ainda que o WSS apresentasse redução contínua para valores crescentes de K, essa redução ocorreu de maneira aproximadamente linear, sem indicar um cotovelo claramente definido. Assim, considerando também o conhecimento prévio sobre a estrutura dos ambientes experimentais e a necessidade de manter interpretabilidade, optou-se por adotar $K = 4$ clusters.
 
 ## Aprendizado supervisionado
 
@@ -273,18 +271,16 @@ A PCA permite representar os clusters em duas dimensões, fornecendo uma visão 
 knitr::include_graphics("pca.pdf")
 ```
 
-A partir do método supervisionado é possível estimar a produtividade associada
-para cada cluster conforme pode ser visualizado na legenda da Figura `@ref(fig:mapaprod)`
+A partir do agrupamento, foi possível estimar a produtividade média associada a cada cluster, conforme detalhado na legenda da Figura `@ref(fig:mapaprod)`.Os resultados revelam diferenças expressivas nas médias de produtividade entre os grupos, o que corrobora a tese de que características semelhantes entre as observações influenciam diretamente seu desempenho final.
 
-Os resultados mostram diferenças expressivas nas médias de cada grupo, colaborando com a tese de que características semelhantes influenciam em sua produtividade final.
+A distribuição geográfica desses clusters é visualizada no mapa do Rio Grande do Sul (`Figura @ref(fig:mapaprod)`), onde as médias de produtividade de cada grupo e sua localização são apresentadas. O mapa inclui um raio de $100 \text{ km}$ em torno dos pontos, sugerindo uma homogeneidade de características dentro dessa área.
 
-Além disso é interessante notar o padrão geográfico de cada cluster a partir de um mapa do Rio Grande do Sul, como pode ser visualizado na Figura `@ref(fig:mapaprod)`. Nele é apresentado as médias de cada grupo e sua localização geográfico, junto com um raio de 100 km, supondo homogeneidade nessa região. 
+Essa representação espacial demonstra que a divisão dos clusters está fortemente correlacionada com as divisões geográficas do estado, destacando a relevância dos fatores naturais e regionais na determinação da produtividade.
 
 ```{r mapaprod, fig.cap="Mapa da Produtividade Média por Cluster"}
 knitr::include_graphics("mapa_prod.pdf")
 ```
 
-Esse mapa mostra divisões do estado e sua influência na divisão dos clusters e suas produtividades. Sendo assim é possível notar o quão relevante é os fatores naturais de cada região.
 
 # Conclusão
 
@@ -295,5 +291,3 @@ O agrupamento via K-Means permitiu segmentar os ambientes em quatro clusters com
 A etapa supervisionada, utilizando uma árvore de regressão, confirmou que os clusters possuem relação significativa com a produtividade, indicando que regiões com atributos semelhantes apresentam desempenhos próximos. O mapeamento espacial reforçou o papel dos fatores naturais na diferenciação produtiva.
 
 Em síntese, os resultados mostram que métodos de machine learning são úteis para identificar padrões ambientais e apoiar a predição da produtividade. Estudos futuros podem explorar modelos mais complexos e integrar novas fontes de dados para aprofundar as análises.
-
-# Referências
