@@ -23,11 +23,28 @@ dados_ml <- read.csv2("dados_ml.csv")
 
 dados_ml$dias <- yday(dados_ml$Epoca_de_semeadura)
 
+dados_ml$Populacao <- dados_ml$Populacao 
+
 dados <- dados_ml %>% 
-  select(-c(COD_PROD, Cod_Estacao_Met, Area_colhida, Epoca_de_semeadura, Cultivar, Produtividade)) %>%
-  drop_na() |> 
+  select(-c(COD_PROD, Cod_Estacao_Met, Area_colhida, Epoca_de_semeadura, 
+            Cultivar, GMR, N_Plantas)) |> 
   dplyr::mutate(across(where(is.numeric), as.numeric),
-                across(!where(is.numeric), as.factor))
+                across(!where(is.numeric), as.factor),
+                Populacao = na_if(Populacao, 0)) |> 
+  group_by(across(-c(Populacao, Produtividade))) |> 
+  summarise(
+    Populacao = mean(Populacao, na.rm = T),
+    Produtividade = mean(Produtividade),
+    .groups = "drop"
+  ) |> 
+  drop_na()
+
+dados2 <- dados
+
+
+dados <- dados |> 
+  select(-Produtividade)
+
 
 
 # 2) Recipe: remover y, checar ZV e normalizar --------------------------------
@@ -241,11 +258,6 @@ View(cl)
 #==========/==========/==========/==========/==========/==========/==========/==========/
 
 
-dados2 <- dados_ml %>% 
-  select(-c(COD_PROD, Cod_Estacao_Met, Area_colhida, Epoca_de_semeadura, Cultivar)) %>%
-  drop_na() |> 
-  dplyr::mutate(across(where(is.numeric), as.numeric),
-                across(!where(is.numeric), as.factor))
 
 dados_f <- cbind(clusters, dados2$Produtividade)
 
@@ -275,7 +287,7 @@ grade <- dials::grid_latin_hypercube(
   dials::cost_complexity(),
   dials::tree_depth(),
   dials::min_n(),
-  size = 300
+  size = 100
 )
 
 # Tunagem ####
@@ -342,7 +354,7 @@ View(ab)
 library(geobr)
 library(sf)
 
-#prod_c <- stats::predict(ajuste_final, new_data = dados_f)
+prod_c <- stats::predict(ajuste_final, new_data = dados_f)
 
 
 
@@ -380,8 +392,8 @@ graph1 <- ggplot() +
 
 graph1
 
-ggsave("mapa_cluster.pdf", graph1, width = 5, height = 3, 
-       units = "in", dpi = 200)
+#ggsave("mapa_cluster.pdf", graph1, width = 5, height = 3, 
+#       units = "in", dpi = 200)
 
 
 # opção 2
@@ -518,8 +530,8 @@ graph2 <- ggplot() +
   )
 
 graph2
-ggsave("mapa_prod.pdf", graph2, width = 5, height = 3, 
-       units = "in", dpi = 200)
+#ggsave("mapa_prod.pdf", graph2, width = 5, height = 3, 
+#       units = "in", dpi = 200)
 
 
 #==========/==========/==========/==========/==========/==========/==========/==========/
