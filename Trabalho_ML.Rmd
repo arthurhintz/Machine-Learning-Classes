@@ -103,7 +103,7 @@ chara <- a |>
   select(skim_variable, n_missing, character.n_unique) |> 
   rename(variaveis = skim_variable, n_faltantes = n_missing, n_categorias = character.n_unique)
 
-knitr::kable(chara, caption = "Tabela das variáveis qualitativas", label = "quali") |>
+knitr::kable(chara, caption = "Variáveis qualitativas", label = "quali") |>
   kableExtra::kable_styling(font_size = 10, full_width = FALSE)
 ```
 
@@ -121,7 +121,7 @@ nume <- a |>
          quartil_75 = numeric.p75, max = numeric.p100) |> 
   mutate(round(across(!variaveis), 2)) 
 
-knitr::kable(nume, caption = "Tabela das variáveis quantitativas", label = "quanti") |>
+knitr::kable(nume, caption = "Variáveis quantitativas", label = "quanti") |>
   kableExtra::kable_styling(font_size = 10, full_width = FALSE)
 ```
 
